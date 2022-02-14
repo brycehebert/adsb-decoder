@@ -1,0 +1,24 @@
+{
+  "name": "adsb-decoder",
+  "version": "1.0.0",
+  "description": "Takes a stream of ADS-B messages and decodes them",
+  "main": "src/client.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brycehebert/adsb-decoder.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/brycehebert/adsb-decoder/issues"
+  },
+  "homepage": "https://github.com/brycehebert/adsb-decoder#readme",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "netcat": "^1.5.0"
+  }
+}
