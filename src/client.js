@@ -1,7 +1,10 @@
 const NetCat = require("netcat/client");
 const Stream = require("stream");
 const EventEmitter = require("events");
-require('dotenv').config()
+const _debounce = require("lodash/debounce");
+require("dotenv").config();
+
+const { getTypeCodeString } = require("./typecode");
 
 const strToByteArray = (str) => {
   const size = str.length / 2;
@@ -13,36 +16,38 @@ const strToByteArray = (str) => {
   return arr;
 };
 
-const getTypeCodeString = (tc) => {
-  if (tc <= 4) return "Aircraft Identification";
-  if (tc >= 5 && tc <= 8) return "Surface Position";
-  if (tc >= 9 && tc <= 18) return "Airborne Position (w/ Barometer Alt.)";
-  if (tc === 19) return "Airborne Velocities";
-  if (tc >=20 && tc <= 22) return "Airborne Position (w/ GNSS Height)"
-  if (tc === 28) return "Aircraft Status";
-  if (tc === 29) return "Target state and status information";
-  if (tc === 31) return "Aircraft operation status"
-};
-
 const processQueue = () => {
   if (messageQueue.length === 0) return;
 
   for (messageObj of messageQueue) {
     let messageByteArr = strToByteArray(messageObj.message);
+    //Transponder capability is the last 3 bits of the first byte
     let transCapability = messageByteArr[0] & 7;
+    //ICAO hex code is the literal hexadecimal digits of bytes 2-4 in the message
     let icaoHex = messageObj.message.substring(2, 8);
+    //The main data (Message Extended Squitter - ME) is bytes 5 - 11
     let me = messageByteArr.slice(4, 11);
+    //Message type code is the first 5 bits of the first byte of the ME
     let meTypeCode = me[0] >> 3;
     let meTypeCodeString = getTypeCodeString(meTypeCode);
     let timeSent = messageObj.now;
-    let newMessage = { transCapability, icaoHex, meTypeCode, meTypeCodeString, timeSent, rawMessage: messageObj.message };
+    let newMessage = {
+      transCapability,
+      icaoHex,
+      meTypeCode,
+      meTypeCodeString,
+      timeSent,
+      rawMessage: messageObj.message
+    };
     messages[icaoHex] = newMessage;
     messageQueue.pop();
   }
   console.log(messages);
 };
 const emitter = new EventEmitter();
-emitter.on("new-data", processQueue);
+// Give a little extra time to get more data in the queue, but only wait up to 1 second between calls
+const debounced = _debounce(processQueue, 200, { maxWait: 1000 });
+emitter.on("new-data", debounced);
 
 const processChunk = (chunk) => {
   let arr = Array.from(chunk)
